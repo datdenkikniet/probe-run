@@ -50,6 +50,7 @@ pub fn target(core: &mut Core, elf: &Elf, active_ram_region: &Option<RamRegion>)
 
     let mut pc = unwrap_or_return_output!(core.read_core_reg(registers::PC));
     let sp = unwrap_or_return_output!(core.read_core_reg(registers::SP));
+    let mut previous_lr = None;
     let lr = unwrap_or_return_output!(core.read_core_reg(registers::LR));
     let base_addresses = BaseAddresses::default();
     let mut unwind_context = UnwindContext::new();
@@ -85,11 +86,20 @@ pub fn target(core: &mut Core, elf: &Elf, active_ram_region: &Option<RamRegion>)
 
         let lr = unwrap_or_return_output!(registers.get(registers::LR));
 
-        log::debug!("LR={:#010X} PC={:#010X}", lr, pc);
+        log::debug!(
+            "LR={:#010X} PC={:#010X}, Previous LR={:010X?}",
+            lr,
+            pc,
+            previous_lr
+        );
 
         if lr == registers::LR_END {
             break;
+        } else if Some(lr) == previous_lr {
+            break;
         }
+
+        previous_lr = Some(lr);
 
         // Link Register contains an EXC_RETURN value. This deliberately also includes
         // invalid combinations of final bits 0-4 to prevent futile backtrace re-generation attempts
